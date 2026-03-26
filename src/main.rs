@@ -6,32 +6,32 @@ use colored::Colorize;
 
 fn be_u32(data: &[u8], idx:usize) -> u32
 {
-  return u32::from_be_bytes(data[idx..idx+4].try_into().expect("be_u32"));
+  return u32::from_be_bytes(data[idx..idx+4].try_into().unwrap());
 }
 
 fn be_u16(data: &[u8], idx:usize) -> u16
 {
-  return u16::from_be_bytes(data[idx..idx+2].try_into().expect("be_u16"));
+  return u16::from_be_bytes(data[idx..idx+2].try_into().unwrap());
 }
 
 fn be_i16(data: &[u8], idx:usize) -> i16
 {
-  return i16::from_be_bytes(data[idx..idx+2].try_into().expect("be_i16"));
+  return i16::from_be_bytes(data[idx..idx+2].try_into().unwrap());
 }
 
 fn main() -> Result<()>
 {
-  let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).expect("Socket");
+  let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
-  sock2.set_reuse_address(true).expect("set_reuse_address");
+  sock2.set_reuse_address(true).unwrap();
 
   let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 4357);
 
-  sock2.bind(&addr.into()).expect("bind");
+  sock2.bind(&addr.into()).unwrap();
 
-  let group = Ipv4Addr::from_str("239.128.1.1").expect("from_str");
+  let group = Ipv4Addr::from_str("239.128.1.1").unwrap();
 
-  sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED)?;
+  sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED).unwrap();
 
   let sock: UdpSocket = sock2.into();
 
@@ -106,9 +106,9 @@ fn main() -> Result<()>
         let dev_index = be_u32(&edp, 16);   let dev_class = be_u32(&edp, 20);   let dev_type  = be_u32(&edp, 24);   let seconds = be_u32(&edp, 28);
         let seq_num   = be_u32(&edp, 32);   let sound_id  = be_u32(&edp, 36);   let speech_id = be_u32(&edp, 40);   let raw_dat = be_u32(&edp, 44);
 
-        let name      = str::from_utf8(&edp[48..64]).expect("from_utf8 name").trim_end_matches('\0').trim_end();
-        let full_name = str::from_utf8(&edp[64..128]).expect("from_utf8 full_name").trim_end_matches('\0').trim_end();
-        let text      = str::from_utf8(&edp[128..192]).expect("from_utf8 text").trim_end_matches('\0').trim_end();
+        let name      = str::from_utf8(&edp[48..64]).unwrap().trim_end_matches('\0').trim_end();
+        let full_name = str::from_utf8(&edp[64..128]).unwrap().trim_end_matches('\0').trim_end();
+        let text      = str::from_utf8(&edp[128..192]).unwrap().trim_end_matches('\0').trim_end();
 
         let bypass =    ((status & 1) == 0)   as u8;
         let alarm  =    ((status >>  1) & 1)  as u8;
