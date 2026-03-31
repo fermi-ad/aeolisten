@@ -93,9 +93,15 @@ fn main() -> Result<()>
 
       println!("{}", format!("EDP  ip_ver: {ip_ver:.1}   mc_ver: {mc_ver:.1}   seq_num: {seq_num}   typecode: {typecode}   count: {count}   version: {version}   edm_seq: {edm_seq}").green());
 
+      let mut num_edp = (len - 40) / 192;
+
+      if num_edp != count as usize
+      {
+        println!("{}", format!("Calculated # of edps {num_edp} does not match header count {count}").bright_red());
+      }
+
       let mut edp = &hdr[8..];
 
-      let mut num_edp = (len - 40) / 192;
       while num_edp > 0
       {
         let typecode  = edp[0];   let priority  = edp[1];   let trunk   = edp[2];   let node    = edp[3];   let ssn     = edp[4];
