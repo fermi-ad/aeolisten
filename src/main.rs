@@ -1,9 +1,8 @@
-use std::net::{ Ipv4Addr, SocketAddrV4, UdpSocket };
-use socket2::{ Domain, Protocol, Socket, Type };
-use std::str::FromStr;
-use std::io::Result;
 use colored::Colorize;
 use redis::{ Commands, streams::StreamMaxlen };
+use socket2::{ Domain, Protocol, Socket, Type };
+use std::net::{ Ipv4Addr, SocketAddrV4, UdpSocket };
+use std::str::FromStr;
 
 fn be_u32(data: &[u8], idx:usize) -> u32
 {
@@ -20,7 +19,7 @@ fn be_i16(data: &[u8], idx:usize) -> i16
   return i16::from_be_bytes(data[idx..idx+2].try_into().unwrap());
 }
 
-fn main() -> Result<()>
+fn main() -> std::io::Result<()>
 {
   let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
@@ -66,7 +65,7 @@ fn main() -> Result<()>
     {
       let hb = &buf[32..];
 
-      let typecode   = hb[0];
+      let typecode    = hb[0];
       let seconds    = be_u32(&hb, 4);
       let edm_seq    = be_u32(&hb, 8);
       let evt_seq    = be_u32(&hb, 12);
@@ -81,7 +80,7 @@ fn main() -> Result<()>
     {
       let mclr = &buf[32..];
 
-      let typecode  = mclr[0];
+      let typecode   = mclr[0];
       let daemon_id = be_u32(&mclr, 64);
       let edm_seq   = be_u32(&mclr, 68);
 
@@ -91,9 +90,9 @@ fn main() -> Result<()>
     {
       let hdr = &buf[32..];
 
-      let typecode = hdr[0];
-      let count    = hdr[1];
-      let version  = hdr[2];
+      let typecode  = hdr[0];
+      let count     = hdr[1];
+      let version   = hdr[2];
       let edm_seq  = be_u32(&hdr, 4);
 
       println!("{}", format!("EDP  ip_ver: {ip_ver:.1}   mc_ver: {mc_ver:.1}   seq_num: {seq_num}   typecode: {typecode}   count: {count}   version: {version}   edm_seq: {edm_seq}").green());
@@ -114,26 +113,28 @@ fn main() -> Result<()>
 
         let status  = be_u16(&edp, 10);   let handler = be_u16(&edp, 12);   let alarm_list  = be_i16(&edp, 14);
 
-        let dev_index = be_u32(&edp, 16);   let dev_class = be_u32(&edp, 20);   let dev_type  = be_u32(&edp, 24);   let seconds = be_u32(&edp, 28);
-        let seq_num   = be_u32(&edp, 32);   let sound_id  = be_u32(&edp, 36);   let speech_id = be_u32(&edp, 40);   let raw_dat = be_u32(&edp, 44);
+        let dev_index = be_u32(&edp, 16);   let dev_class = be_u32(&edp, 20);
+        let dev_type  = be_u32(&edp, 24);   let seconds   = be_u32(&edp, 28);
+        let seq_num   = be_u32(&edp, 32);   let sound_id  = be_u32(&edp, 36);
+        let speech_id = be_u32(&edp, 40);   let raw_dat   = be_u32(&edp, 44);
 
         let name      = str::from_utf8(&edp[48..64]).unwrap().trim_end_matches('\0').trim_end();
         let full_name = str::from_utf8(&edp[64..128]).unwrap().trim_end_matches('\0').trim_end();
         let text      = str::from_utf8(&edp[128..192]).unwrap().trim_end_matches('\0').trim_end();
 
-        let bypass =    ((status & 1) == 0)   as u8;
-        let alarm  =    ((status >>  1) & 1)  as u8;
-        let trigger =   ((status >>  2) & 1)  as u8;
-        let inhibit =   ((status >>  3) & 1)  as u8;
-        let reserved =  ((status >>  4) & 1)  as u8;
-        let q_code =    ((status >>  5) & 3)  as u8;
-        let dig_st =    ((status >>  7) & 1)  as u8;
-        let k_code =    ((status >>  8) & 7)  as u8;
-        let low =       ((status >> 11) & 1)  as u8;
-        let high =      ((status >> 12) & 1)  as u8;
+        let bypass    = ((status & 1) == 0)   as u8;
+        let alarm     = ((status >>  1) & 1)  as u8;
+        let trigger   = ((status >>  2) & 1)  as u8;
+        let inhibit   = ((status >>  3) & 1)  as u8;
+        let reserved  = ((status >>  4) & 1)  as u8;
+        let q_code    = ((status >>  5) & 3)  as u8;
+        let dig_st    = ((status >>  7) & 1)  as u8;
+        let k_code    = ((status >>  8) & 7)  as u8;
+        let low       = ((status >> 11) & 1)  as u8;
+        let high      = ((status >> 12) & 1)  as u8;
         let exception = ((status >> 13) & 1)  as u8;
-        let logging =   ((status >> 14) & 1)  as u8;
-        let display =   ((status >> 15) & 1)  as u8;
+        let logging   = ((status >> 14) & 1)  as u8;
+        let display   = ((status >> 15) & 1)  as u8;
 
         let is_digital  = dig_edp != 0 || dig_st != 0;
         let is_mismatch = dig_edp != dig_st;
@@ -232,9 +233,9 @@ fn main() -> Result<()>
         println!("{line5a}{line5b}{line5c}{line5d}");
         println!("{line6a}{line6b}{line6c}{line6d}{line6e}");
 
-        let source = if dig_st == 0 { "ANALOG" } else { "DIGITAL"};
+        let source   = if dig_st == 0 { "ANALOG" } else { "DIGITAL"};
         let severity = if alarm == 0 { "NO_ALARM" } else if priority < 10 { "MINOR" } else { "MAJOR" };
-        let detail = if bypass == 0
+        let detail   = if bypass == 0
         {
           if alarm == 0
           {
@@ -253,12 +254,11 @@ fn main() -> Result<()>
         }
         else { "BYPASS" };
 
-        let fields = [ ("device", name),
-                                          ("timestamp", &seconds.to_string()),
-                                          ("source", source),
-                                          ("severity", severity),
-                                          ("detail", detail),
-                                          ("message", &text.to_string()) ];
+        let fields =
+        [
+          ("device", name),       ("source", source), ("timestamp", &seconds.to_string()),
+          ("severity", severity), ("detail", detail), ("message", &text.to_string())
+        ];
 
         let _: String = redis.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
 
