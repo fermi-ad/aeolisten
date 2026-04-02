@@ -45,7 +45,7 @@ fn main() -> std::io::Result<()>
 
   loop
   {
-    let (len, _) = sock.recv_from(&mut buf)?;
+    let (len, _) = sock.recv_from(&mut buf).unwrap();
 
     if len == buf.len() { println!("{}", "\nMax data received".bright_red()); }
 
