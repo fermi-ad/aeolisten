@@ -3,6 +3,7 @@ use socket2::{ Domain, Protocol, Socket, Type };
 use std::str::FromStr;
 use std::io::Result;
 use colored::Colorize;
+use redis::{ Commands, streams::StreamMaxlen };
 
 fn be_u32(data: &[u8], idx:usize) -> u32
 {
@@ -21,6 +22,10 @@ fn be_i16(data: &[u8], idx:usize) -> i16
 
 fn main() -> Result<()>
 {
+  let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+
+  let mut redis = client.get_connection().unwrap();
+
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
   sock2.set_reuse_address(true).unwrap();
@@ -226,6 +231,36 @@ fn main() -> Result<()>
         println!("{line4a}{line4b}{line4c}");
         println!("{line5a}{line5b}{line5c}{line5d}");
         println!("{line6a}{line6b}{line6c}{line6d}{line6e}");
+
+        let source = if dig_st == 0 { "ANALOG" } else { "DIGITAL"};
+        let severity = if alarm == 0 { "NO_ALARM" } else if priority < 10 { "MINOR" } else { "MAJOR" };
+        let detail = if bypass == 0
+        {
+          if alarm == 0
+          {
+            if dig_st == 0 { "ANALOG" } else { "DIGITAL" }
+          }
+          else
+          {
+            if dig_st == 0
+            {
+              if low != 0 && high == 0 { "LOW" }
+              else if low == 0 && high != 0 { "HIGH" }
+              else { "ANALOG" }
+            }
+            else { &raw_dat.to_string() }
+          }
+        }
+        else { "BYPASS" };
+
+        let fields = [ ("device", name),
+                                          ("timestamp", &seconds.to_string()),
+                                          ("source", source),
+                                          ("severity", severity),
+                                          ("detail", detail),
+                                          ("message", &text.to_string()) ];
+
+        let _: String = redis.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
 
         edp = &edp[192..];
         num_edp -= 1;
