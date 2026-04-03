@@ -268,7 +268,7 @@ fn main() -> std::io::Result<()>
             ("severity", severity), ("detail", detail), ("message", &text.to_string())
           ];
           let cxn = redis.as_mut().unwrap();
-          let _:Result<(), _> = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields);
+          let _: Result<(), _> = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields);
         }
 
         edp = &edp[192..];
