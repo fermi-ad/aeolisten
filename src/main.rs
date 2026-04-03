@@ -23,12 +23,13 @@ fn main() -> std::io::Result<()>
 {
   let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
-  // let mut redis = client.get_connection().unwrap();
   let mut redis = client.get_connection();
 
-  let is_redis = redis.is_ok();
-
-  if ! is_redis { println!("{}", "\nNo redis connection".white()); }
+  match redis
+  {
+    Ok(_) =>  println!("{}", "\nConnected to Redis".white()),
+    Err(_) => println!("{}", "\nNo Redis connection".magenta())
+  }
 
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
@@ -44,7 +45,7 @@ fn main() -> std::io::Result<()>
 
   let sock: UdpSocket = sock2.into();
 
-  println!("{}", "\nListening ...".white());
+  println!("{}", "\nListening to Multicast ...".white());
 
   let mut buf = [0u8; 9999];
 
@@ -259,16 +260,19 @@ fn main() -> std::io::Result<()>
         }
         else { "BYPASS" };
 
-        let fields =
-        [
-          ("device", name),       ("source", source), ("timestamp", &seconds.to_string()),
-          ("severity", severity), ("detail", detail), ("message", &text.to_string())
-        ];
-
-        if is_redis
+        match redis
         {
-          let cxn = redis.as_mut().unwrap();
-          let _: String = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
+          Ok(ref mut cxn) =>
+          {
+            let fields =
+            [
+              ("device", name),       ("source", source), ("timestamp", &seconds.to_string()),
+              ("severity", severity), ("detail", detail), ("message", &text.to_string())
+            ];
+
+            let _: String = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
+          },
+          Err(_) => break
         }
 
         edp = &edp[192..];
