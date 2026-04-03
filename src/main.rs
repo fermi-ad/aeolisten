@@ -23,7 +23,12 @@ fn main() -> std::io::Result<()>
 {
   let client = redis::Client::open("redis://127.0.0.1/").unwrap();
 
-  let mut redis = client.get_connection().unwrap();
+  // let mut redis = client.get_connection().unwrap();
+  let mut redis = client.get_connection();
+
+  let is_redis = redis.is_ok();
+
+  if ! is_redis { println!("{}", "\nNo redis connection".white()); }
 
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
@@ -260,7 +265,11 @@ fn main() -> std::io::Result<()>
           ("severity", severity), ("detail", detail), ("message", &text.to_string())
         ];
 
-        let _: String = redis.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
+        if is_redis
+        {
+          let cxn = redis.as_mut().unwrap();
+          let _: String = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
+        }
 
         edp = &edp[192..];
         num_edp -= 1;
