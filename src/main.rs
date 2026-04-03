@@ -21,7 +21,7 @@ fn be_i16(data: &[u8], idx:usize) -> i16
 
 fn main() -> std::io::Result<()>
 {
-  let client = redis::Client::open("redis://127.0.0.1/").unwrap();
+  let client = redis::Client::open("redis://127.0.0.1").unwrap();
 
   let mut redis = client.get_connection();
 
