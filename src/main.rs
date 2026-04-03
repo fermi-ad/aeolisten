@@ -260,19 +260,15 @@ fn main() -> std::io::Result<()>
         }
         else { "BYPASS" };
 
-        match redis
+        if redis.is_ok()
         {
-          Ok(ref mut cxn) =>
-          {
-            let fields =
-            [
-              ("device", name),       ("source", source), ("timestamp", &seconds.to_string()),
-              ("severity", severity), ("detail", detail), ("message", &text.to_string())
-            ];
-
-            let _: String = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap();
-          },
-          Err(_) => break
+          let fields =
+          [
+            ("device", name),       ("source", source), ("timestamp", &seconds.to_string()),
+            ("severity", severity), ("detail", detail), ("message", &text.to_string())
+          ];
+          let cxn = redis.as_mut().unwrap();
+          cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields).unwrap()
         }
 
         edp = &edp[192..];
