@@ -6,17 +6,17 @@ use std::str::FromStr;
 
 fn be_u32(data: &[u8], idx:usize) -> u32
 {
-  return u32::from_be_bytes(data[idx..idx+4].try_into().unwrap());
+  u32::from_be_bytes(data[idx..idx+4].try_into().unwrap())
 }
 
 fn be_u16(data: &[u8], idx:usize) -> u16
 {
-  return u16::from_be_bytes(data[idx..idx+2].try_into().unwrap());
+  u16::from_be_bytes(data[idx..idx+2].try_into().unwrap())
 }
 
 fn be_i16(data: &[u8], idx:usize) -> i16
 {
-  return i16::from_be_bytes(data[idx..idx+2].try_into().unwrap());
+  i16::from_be_bytes(data[idx..idx+2].try_into().unwrap())
 }
 
 fn main() -> std::io::Result<()>
@@ -33,15 +33,15 @@ fn main() -> std::io::Result<()>
 
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
-  sock2.set_reuse_address(true).unwrap();
+  let _ = sock2.set_reuse_address(true);
 
   let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 4357);
 
-  sock2.bind(&addr.into()).unwrap();
+  let _ = sock2.bind(&addr.into());
 
   let group = Ipv4Addr::from_str("239.128.1.1").unwrap();
 
-  sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED).unwrap();
+  let _ = sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED);
 
   let sock: UdpSocket = sock2.into();
 
