@@ -19,7 +19,7 @@ fn be_i16(data: &[u8], idx:usize) -> i16
   i16::from_be_bytes(data[idx..idx+2].try_into().unwrap())
 }
 
-fn main() -> std::io::Result<()>
+fn main()
 {
   let client = redis::Client::open("redis://127.0.0.1").unwrap();
 
