@@ -154,7 +154,7 @@ fn main()
 
         //  typecode: 123   priority: 123   trunk: 12345   node: 123456789   ssn: 12345678   dev_type: 1234567
         //  broken: 12345   unused: 12345   handler: 123   alarm_list: 123   erp_type: 123   dev_index: 123456
-        //  dev_class: 12   bs: 123456789   sound_id: 12   speech_id: 1234   dig_edp: 1234   raw_dat: 12345678
+        //  dev_class: 12   bs: 123456789   sound_id: 12   speech_id: 1234   dig_edp: 1234   raw_dat: 0x12345678
 
         let line2 =
         {
@@ -178,16 +178,16 @@ fn main()
         };
         let line4c =
         {
-          let txt = format!("   raw_dat: {raw_dat:8x}");
+          let txt = format!("   raw_dat: {raw_dat:#8x}");
           if is_digital { txt.cyan() } else { txt.yellow() }
         };
 
-        //  status: 1234   bypass: 12   alarm: 1   trigger: 1   inhibit: 123   reserved: 1   q_code: 12
-        //  dig_st: 1234   k_code: 12   low: 123   high: 1234   exception: 1   logging: 12   display: 1
+        //  status: 0x1234   bypass: 12   alarm: 1   trigger: 1   inhibit: 123   reserved: 1   q_code: 12
+        //  dig_st:   1234   k_code: 12   low: 123   high: 1234   exception: 1   logging: 12   display: 1
 
         let line5a =
         {
-          let txt = format!("status: {status:04x}   ");
+          let txt = format!("status: {status:#06x}   ");
           if status == 0 { txt.bright_red() } else if is_digital { txt.cyan() } else { txt.yellow() }
         };
         let line5b =
@@ -207,7 +207,7 @@ fn main()
         };
         let line6a =
         {
-          let txt = format!("dig_st: {dig_st:4}   ");
+          let txt = format!("dig_st: {dig_st:6}   ");
           if is_mismatch { txt.bright_red() } else if is_digital { txt.cyan() } else { txt.yellow() }
         };
         let line6b =
