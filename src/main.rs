@@ -1,8 +1,29 @@
+use clap::Parser;
 use colored::Colorize;
 use redis::{ Commands, streams::StreamMaxlen };
 use socket2::{ Domain, Protocol, Socket, Type };
 use std::net::{ Ipv4Addr, SocketAddrV4, UdpSocket };
 use std::str::FromStr;
+
+#[derive(Parser)]
+struct Args
+{
+  /// Address of Redis server
+  #[arg(short, default_value_t = String::from("127.0.0.1"))]
+  redis_address: String,
+
+  /// Port of Redis server
+  #[arg(short, default_value_t = 6379)]
+  port_redis: u16,
+
+  /// Address of AEOLUS server
+  #[arg(short, default_value_t = String::from("239.128.1.1"))]
+  aeolus_address: String,
+
+  /// Multicast listen port
+  #[arg(short, default_value_t = 4357)]
+  multicast_port: u16,
+}
 
 fn be_u32(data: &[u8], idx:usize) -> u32
 {
@@ -21,31 +42,35 @@ fn be_i16(data: &[u8], idx:usize) -> i16
 
 fn main()
 {
-  let client = redis::Client::open("redis://127.0.0.1").unwrap();
+  let args = Args::parse();
+
+  let uri = format!("redis://{}:{}", args.redis_address, args.port_redis);
+
+  let client = redis::Client::open(uri).unwrap();
 
   let mut redis = client.get_connection();
 
   match redis
   {
-    Ok(_) =>  println!("{}", "\nConnected to Redis".white()),
-    Err(_) => println!("{}", "\nNo Redis connection".magenta())
+    Ok(_) =>  println!("{}", format!("\nConnected to Redis at {}:{}", args.redis_address, args.port_redis).white()),
+    Err(_) => println!("{}", format!("\nNo Redis connection at {}:{}", args.redis_address, args.port_redis).magenta())
   }
 
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
   let _ = sock2.set_reuse_address(true);
 
-  let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, 4357);
+  let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, args.multicast_port);
 
   let _ = sock2.bind(&addr.into());
 
-  let group = Ipv4Addr::from_str("239.128.1.1").unwrap();
+  let group = Ipv4Addr::from_str(&args.aeolus_address).unwrap();
 
   let _ = sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED);
 
   let sock: UdpSocket = sock2.into();
 
-  println!("{}", "\nListening to Multicast ...".white());
+  println!("{}", format!("\nListening on {} to multicast from {}", args.multicast_port, args.aeolus_address).white());
 
   let mut buf = [0u8; 9999];
 
