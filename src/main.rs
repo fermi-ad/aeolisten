@@ -1,6 +1,6 @@
 use clap::Parser;
 use colored::Colorize;
-use redis::{ Commands, streams::StreamMaxlen };
+use redis::{ Client, Commands, streams::StreamMaxlen };
 use socket2::{ Domain, Protocol, Socket, Type };
 use std::net::{ Ipv4Addr, SocketAddrV4, UdpSocket };
 use std::str::FromStr;
@@ -8,21 +8,25 @@ use std::str::FromStr;
 #[derive(Parser)]
 struct Args
 {
+  /// Address of AEOLUS multicast
+  #[arg(short, default_value_t = String::from("239.128.1.1"))]
+  aeolus_multicast: String,
+
+  /// Local listen port
+  #[arg(short, default_value_t = 4357)]
+  local_port: u16,
+
   /// Address of Redis server
   #[arg(short, default_value_t = String::from("127.0.0.1"))]
   redis_address: String,
 
   /// Port of Redis server
-  #[arg(short, default_value_t = 6379)]
-  port_redis: u16,
+  #[arg(short='p', default_value_t = 6379)]
+  redis_port: u16,
 
-  /// Address of AEOLUS server
-  #[arg(short, default_value_t = String::from("239.128.1.1"))]
-  aeolus_address: String,
-
-  /// Multicast listen port
-  #[arg(short, default_value_t = 4357)]
-  multicast_port: u16,
+  /// Key name for Redis stream
+  #[arg(short, default_value_t = String::from("acorn:alarms"))]
+  stream_key: String,
 }
 
 fn be_u32(data: &[u8], idx:usize) -> u32
@@ -44,33 +48,33 @@ fn main()
 {
   let args = Args::parse();
 
-  let uri = format!("redis://{}:{}", args.redis_address, args.port_redis);
+  let uri = format!("redis://{}:{}", args.redis_address, args.redis_port);
 
-  let client = redis::Client::open(uri).unwrap();
+  let client = Client::open(uri).unwrap();
 
   let mut redis = client.get_connection();
 
   match redis
   {
-    Ok(_) =>  println!("{}", format!("\nConnected to Redis at {}:{}", args.redis_address, args.port_redis).white()),
-    Err(_) => println!("{}", format!("\nNo Redis connection at {}:{}", args.redis_address, args.port_redis).magenta())
+    Ok(_) =>  println!("{}", format!("\nConnected to Redis at {} on {}", args.redis_address, args.redis_port).white()),
+    Err(_) => println!("{}", format!("\nNo Redis connection at {} on {}", args.redis_address, args.redis_port).magenta())
   }
 
   let sock2 = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP)).unwrap();
 
   let _ = sock2.set_reuse_address(true);
 
-  let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, args.multicast_port);
+  let addr = SocketAddrV4::new(Ipv4Addr::UNSPECIFIED, args.local_port);
 
   let _ = sock2.bind(&addr.into());
 
-  let group = Ipv4Addr::from_str(&args.aeolus_address).unwrap();
+  let group = Ipv4Addr::from_str(&args.aeolus_multicast).unwrap();
 
   let _ = sock2.join_multicast_v4(&group, &Ipv4Addr::UNSPECIFIED);
 
   let sock: UdpSocket = sock2.into();
 
-  println!("{}", format!("\nListening on {} to multicast from {}", args.multicast_port, args.aeolus_address).white());
+  println!("{}", format!("\nListening on {} to multicast from {}", args.local_port, args.aeolus_multicast).white());
 
   let mut buf = [0u8; 9999];
 
@@ -293,7 +297,7 @@ fn main()
             ("severity", severity), ("detail", detail), ("message", &text.to_string())
           ];
           let cxn = redis.as_mut().unwrap();
-          let _: Result<(), _> = cxn.xadd_maxlen("acorn:alarms", StreamMaxlen::Approx(9999), "*", &fields);
+          let _: Result<(), _> = cxn.xadd_maxlen(&args.stream_key, StreamMaxlen::Approx(9999), "*", &fields);
         }
 
         edp = &edp[192..];
